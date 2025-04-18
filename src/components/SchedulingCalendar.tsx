@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CalendarClock, MapPin, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { generateMockTimeSlots, saveAvailability, getAvailability } from "@/utils/calendarStorage";
+import { getAvailability } from "@/utils/calendarStorage";
 import { TimeSlot } from "@/types/calendar";
-import { initializeGoogleAuth } from "@/utils/googleCalendarAuth";
+import { initializeGoogleAuth, getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const salesReps = [
   {
@@ -34,30 +37,95 @@ const salesReps = [
   }
 ];
 
+const BookingDialog = ({ isOpen, onClose, slot, onBook, selectedRep }: any) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onBook({
+      name,
+      email,
+      notes,
+      slot,
+      rep: selectedRep
+    });
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Book Appointment</DialogTitle>
+          <DialogDescription>
+            Fill in your details to book this time slot
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Input
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full">
+            Confirm Booking
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const SchedulingCalendar = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [selectedRep, setSelectedRep] = React.useState<number | null>(null);
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([]);
+  const [selectedSlot, setSelectedSlot] = React.useState<TimeSlot | null>(null);
+  const [isBookingOpen, setIsBookingOpen] = React.useState(false);
   const { toast } = useToast();
 
   React.useEffect(() => {
-    if (date && selectedRep) {
-      const storedAvailability = getAvailability();
-      const repAvailability = storedAvailability.find(a => a.id === selectedRep);
-      
-      if (repAvailability) {
-        setTimeSlots(repAvailability.timeSlots);
-      } else {
-        const newSlots = generateMockTimeSlots(date);
-        setTimeSlots(newSlots);
-        
-        saveAvailability([
-          ...storedAvailability,
-          { id: selectedRep, name: salesReps.find(rep => rep.id === selectedRep)?.name || '', timeSlots: newSlots }
-        ]);
+    const fetchSlots = async () => {
+      if (date && selectedRep) {
+        try {
+          const slots = await getAvailableSlots('primary', date, date);
+          setTimeSlots(slots);
+        } catch (error) {
+          toast({
+            title: "Failed to fetch slots",
+            description: "Please try again later",
+            variant: "destructive",
+          });
+        }
       }
-    }
-  }, [date, selectedRep]);
+    };
+
+    fetchSlots();
+  }, [date, selectedRep, toast]);
 
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     if (!slot.isAvailable) {
@@ -69,10 +137,39 @@ const SchedulingCalendar = () => {
       return;
     }
 
-    toast({
-      title: "Time slot selected",
-      description: `Selected time: ${slot.time}`,
-    });
+    setSelectedSlot(slot);
+    setIsBookingOpen(true);
+  };
+
+  const handleBooking = async (bookingDetails: any) => {
+    try {
+      const rep = salesReps.find(r => r.id === selectedRep);
+      const startTime = `${date?.toISOString().split('T')[0]}T${bookingDetails.slot.startTime}:00`;
+      const endTime = `${date?.toISOString().split('T')[0]}T${bookingDetails.slot.endTime}:00`;
+      
+      await bookAppointment(
+        'primary',
+        startTime,
+        endTime,
+        `Meeting with ${rep?.name}`,
+        `Booking details:\nName: ${bookingDetails.name}\nEmail: ${bookingDetails.email}\nNotes: ${bookingDetails.notes}`
+      );
+
+      toast({
+        title: "Appointment Booked",
+        description: `Your appointment has been scheduled for ${startTime}`,
+      });
+
+      // Refresh the time slots
+      const newSlots = await getAvailableSlots('primary', date!, date!);
+      setTimeSlots(newSlots);
+    } catch (error) {
+      toast({
+        title: "Booking Failed",
+        description: "Failed to book the appointment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleConnectCalendar = () => {
@@ -124,7 +221,7 @@ const SchedulingCalendar = () => {
                       onClick={() => handleTimeSlotSelect(slot)}
                       disabled={!slot.isAvailable}
                     >
-                      {slot.time}
+                      {slot.startTime}
                     </Button>
                   ))}
                 </div>
@@ -176,6 +273,14 @@ const SchedulingCalendar = () => {
           </Card>
         </div>
       </div>
+
+      <BookingDialog
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        slot={selectedSlot}
+        selectedRep={selectedRep}
+        onBook={handleBooking}
+      />
     </div>
   );
 };
