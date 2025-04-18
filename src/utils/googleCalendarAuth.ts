@@ -1,29 +1,59 @@
 
-export const GOOGLE_CLIENT_ID = ''; // You'll need to add your client ID here
+import { supabase } from "@/integrations/supabase/client";
+
 export const GOOGLE_REDIRECT_URI = `${window.location.origin}/auth/callback`;
 
-export const initializeGoogleAuth = () => {
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${GOOGLE_REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/calendar&access_type=offline&prompt=consent`;
-  
-  window.location.href = authUrl;
+export const initializeGoogleAuth = async () => {
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar', {
+      query: { action: 'getAuthUrl' }
+    });
+
+    if (error) throw error;
+    window.location.href = data.url;
+  } catch (error) {
+    console.error('Failed to initialize Google Auth:', error);
+    throw error;
+  }
 };
 
 export const handleAuthCallback = async (code: string) => {
-  // Store the authorization code in localStorage for now
-  localStorage.setItem('google_auth_code', code);
-  return true;
+  try {
+    const { data, error } = await supabase.functions.invoke('google-calendar', {
+      body: { code },
+      query: { action: 'getToken' }
+    });
+
+    if (error) throw error;
+
+    // Store tokens in localStorage
+    localStorage.setItem('google_auth_tokens', JSON.stringify(data.tokens));
+    return true;
+  } catch (error) {
+    console.error('Failed to handle auth callback:', error);
+    throw error;
+  }
 };
 
-export const getAvailableSlots = async (calendarId: string, startDate: Date, endDate: Date) => {
-  const authCode = localStorage.getItem('google_auth_code');
-  if (!authCode) {
-    throw new Error('Not authenticated');
-  }
+export const getAvailableSlots = async (calendarId: string, date: Date) => {
+  try {
+    const tokens = localStorage.getItem('google_auth_tokens');
+    if (!tokens) {
+      throw new Error('Not authenticated');
+    }
 
-  // Here you would make an API call to your backend to handle the token exchange and calendar API calls
-  // For now, we'll return mock data
-  const slots = generateMockTimeSlots(startDate);
-  return slots;
+    const { data, error } = await supabase.functions.invoke('google-calendar', {
+      body: { date: date.toISOString(), calendarId },
+      headers: { Authorization: tokens },
+      query: { action: 'getAvailableSlots' }
+    });
+
+    if (error) throw error;
+    return data.slots;
+  } catch (error) {
+    console.error('Failed to fetch available slots:', error);
+    throw error;
+  }
 };
 
 export const bookAppointment = async (
@@ -33,31 +63,22 @@ export const bookAppointment = async (
   summary: string,
   description: string
 ) => {
-  const authCode = localStorage.getItem('google_auth_code');
-  if (!authCode) {
-    throw new Error('Not authenticated');
-  }
+  try {
+    const tokens = localStorage.getItem('google_auth_tokens');
+    if (!tokens) {
+      throw new Error('Not authenticated');
+    }
 
-  // Here you would make an API call to your backend to handle the token exchange and calendar API calls
-  // For now, we'll return a mock success response
-  console.log('Booking appointment:', { startTime, endTime, summary, description });
-  return true;
-};
-
-const generateMockTimeSlots = (date: Date) => {
-  const slots = [];
-  const startHour = 9;
-  const endHour = 17;
-
-  for (let hour = startHour; hour < endHour; hour++) {
-    slots.push({
-      id: `${date.toISOString()}-${hour}`,
-      startTime: `${hour}:00`,
-      endTime: `${hour + 1}:00`,
-      isAvailable: Math.random() > 0.3
+    const { data, error } = await supabase.functions.invoke('google-calendar', {
+      body: { startTime, endTime, summary, description },
+      headers: { Authorization: tokens },
+      query: { action: 'bookAppointment' }
     });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Failed to book appointment:', error);
+    throw error;
   }
-
-  return slots;
 };
-
