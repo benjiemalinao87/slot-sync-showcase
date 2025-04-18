@@ -1,12 +1,23 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export const GOOGLE_REDIRECT_URI = `https://cobalt-book-a-call.netlify.app/auth/callback`;
 
+// Define required scopes for Google Calendar
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar',       // Full access to calendars
+  'https://www.googleapis.com/auth/calendar.events', // Manage events
+  'https://www.googleapis.com/auth/calendar.readonly', // Read-only access
+  'profile',                                        // Basic profile info
+  'email'                                          // Email address
+];
+
 export const initializeGoogleAuth = async () => {
   try {
     const { data, error } = await supabase.functions.invoke('google-calendar', {
-      body: { action: 'getAuthUrl' }
+      body: { 
+        action: 'getAuthUrl',
+        scopes: SCOPES
+      }
     });
 
     if (error) throw error;

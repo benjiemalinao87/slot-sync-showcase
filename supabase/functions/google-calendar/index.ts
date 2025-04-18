@@ -1,18 +1,16 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
 
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!;
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!;
-const REDIRECT_URI = 'https://cobalt-book-a-call.netlify.app/auth/callback'; 
+const REDIRECT_URI = 'https://cobalt-book-a-call.netlify.app/auth/callback';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Create OAuth2 client
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
@@ -20,13 +18,12 @@ const oauth2Client = new google.auth.OAuth2(
 );
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { action } = await req.json();
+    const { action, scopes } = await req.json();
 
     if (!action) {
       throw new Error('No action specified');
@@ -36,7 +33,8 @@ serve(async (req) => {
       case 'getAuthUrl':
         const authUrl = oauth2Client.generateAuthUrl({
           access_type: 'offline',
-          scope: ['https://www.googleapis.com/auth/calendar'],
+          scope: scopes,
+          prompt: 'consent'
         });
         return new Response(JSON.stringify({ url: authUrl }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
