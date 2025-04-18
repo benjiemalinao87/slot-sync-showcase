@@ -1,15 +1,14 @@
-
 import React, { useState } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarClock, MapPin, Calendar as CalendarIcon, Lock } from "lucide-react";
+import { CalendarClock, MapPin } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getAvailableSlots, bookAppointment, initializeGoogleAuth, isGoogleAuthenticated } from "@/utils/googleCalendarAuth";
+import { getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
 import { TimeSlot } from "@/types/calendar";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
@@ -106,30 +105,13 @@ const SchedulingCalendar = () => {
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = React.useState<TimeSlot | null>(null);
   const [isBookingOpen, setIsBookingOpen] = React.useState(false);
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(isGoogleAuthenticated());
   const { toast } = useToast();
 
   React.useEffect(() => {
-    // Check authentication state on component mount and when localStorage might change
-    const checkAuthStatus = () => {
-      setIsAuthenticated(isGoogleAuthenticated());
-    };
-    
-    checkAuthStatus();
-    
-    // Add event listener for storage changes (in case user logs in in another tab)
-    window.addEventListener('storage', checkAuthStatus);
-    
-    return () => {
-      window.removeEventListener('storage', checkAuthStatus);
-    };
-  }, []);
-
-  React.useEffect(() => {
     const fetchSlots = async () => {
-      if (date && selectedRep && isAuthenticated) {
+      if (date && selectedRep) {
         try {
-          const slots = await getAvailableSlots('primary', date);
+          const slots = await getAvailableSlots(date);
           setTimeSlots(slots);
         } catch (error) {
           console.error('Failed to fetch available slots:', error);
@@ -142,13 +124,8 @@ const SchedulingCalendar = () => {
       }
     };
 
-    if (isAuthenticated) {
-      fetchSlots();
-    } else {
-      // Clear time slots if not authenticated
-      setTimeSlots([]);
-    }
-  }, [date, selectedRep, isAuthenticated, toast]);
+    fetchSlots();
+  }, [date, selectedRep, toast]);
 
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     if (!slot.isAvailable) {
@@ -165,35 +142,28 @@ const SchedulingCalendar = () => {
   };
 
   const handleBooking = async (bookingDetails: any) => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication Required",
-        description: "Please connect your Google Calendar first",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     try {
       const rep = salesReps.find(r => r.id === selectedRep);
       const startTime = `${date?.toISOString().split('T')[0]}T${bookingDetails.slot.startTime}:00`;
       const endTime = `${date?.toISOString().split('T')[0]}T${bookingDetails.slot.endTime}:00`;
       
       await bookAppointment(
-        'primary',
         startTime,
         endTime,
-        `Meeting with ${rep?.name}`,
-        `Booking details:\nName: ${bookingDetails.name}\nEmail: ${bookingDetails.email}\nNotes: ${bookingDetails.notes}`
+        {
+          name: bookingDetails.name,
+          email: bookingDetails.email,
+          notes: bookingDetails.notes
+        }
       );
 
       toast({
         title: "Appointment Booked",
-        description: `Your appointment has been scheduled for ${startTime}`,
+        description: `Your appointment has been scheduled with ${rep?.name} for ${startTime}`,
       });
 
       // Refresh the time slots
-      const newSlots = await getAvailableSlots('primary', date!);
+      const newSlots = await getAvailableSlots(date!);
       setTimeSlots(newSlots);
     } catch (error) {
       toast({
@@ -204,39 +174,8 @@ const SchedulingCalendar = () => {
     }
   };
 
-  const handleConnectCalendar = () => {
-    initializeGoogleAuth();
-  };
-
-  const renderAuthenticationState = () => {
-    if (!isAuthenticated) {
-      return (
-        <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300 mb-6">
-          <CardContent className="p-6 flex flex-col items-center justify-center space-y-4">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-purple-100 mb-2">
-              <Lock className="h-8 w-8 text-purple-500" />
-            </div>
-            <h3 className="text-xl font-semibold text-center">Connect Your Google Calendar</h3>
-            <p className="text-gray-600 text-center">
-              To view available slots and book appointments, you need to connect your Google Calendar.
-            </p>
-            <Button 
-              onClick={handleConnectCalendar}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md"
-            >
-              Connect Google Calendar
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {renderAuthenticationState()}
-      
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="lg:w-2/3">
           <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -247,14 +186,6 @@ const SchedulingCalendar = () => {
                   Select your preferred date and time
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-colors"
-                onClick={handleConnectCalendar}
-              >
-                <CalendarIcon className="h-4 w-4 text-purple-500" />
-                <span>{isAuthenticated ? "Reconnect Calendar" : "Connect Calendar"}</span>
-              </Button>
             </CardHeader>
             <CardContent className="p-6">
               <div className="flex justify-center mb-8">
@@ -267,7 +198,7 @@ const SchedulingCalendar = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Available Time Slots</h3>
-                {isAuthenticated && selectedRep ? (
+                {selectedRep ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {timeSlots.length > 0 ? timeSlots.map((slot) => (
                       <Button
@@ -291,9 +222,7 @@ const SchedulingCalendar = () => {
                   </div>
                 ) : (
                   <p className="text-gray-500 text-center py-4">
-                    {!isAuthenticated 
-                      ? "Please connect your Google Calendar to view available slots" 
-                      : "Please select a sales representative to view available slots"}
+                    Please select a sales representative to view available slots
                   </p>
                 )}
               </div>

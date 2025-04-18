@@ -1,10 +1,11 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
 
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!;
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!;
-const REDIRECT_URI = 'https://cobalt-book-a-call.netlify.app/auth/callback';
+const COMPANY_REFRESH_TOKEN = Deno.env.get('GOOGLE_REFRESH_TOKEN')!;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,9 +14,13 @@ const corsHeaders = {
 
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
-  REDIRECT_URI
+  GOOGLE_CLIENT_SECRET
 );
+
+// Set up authentication with the company's refresh token
+oauth2Client.setCredentials({
+  refresh_token: COMPANY_REFRESH_TOKEN
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,44 +28,16 @@ serve(async (req) => {
   }
 
   try {
-    const { action, scopes } = await req.json();
+    const { action, date, calendarId, startTime, endTime, summary, description } = await req.json();
 
     if (!action) {
       throw new Error('No action specified');
     }
 
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
     switch (action) {
-      case 'getAuthUrl':
-        const authUrl = oauth2Client.generateAuthUrl({
-          access_type: 'offline',
-          scope: scopes,
-          prompt: 'consent'
-        });
-        return new Response(JSON.stringify({ url: authUrl }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-
-      case 'getToken':
-        const { code } = await req.json();
-        const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
-        return new Response(JSON.stringify({ tokens }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-
       case 'getAvailableSlots':
-        const { date, calendarId } = await req.json();
-        
-        // Get tokens from Authorization header
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
-          throw new Error('Authorization header missing');
-        }
-        
-        const tokens = JSON.parse(authHeader);
-        oauth2Client.setCredentials(tokens);
-        
-        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         const startTime = new Date(date);
         startTime.setHours(0, 0, 0, 0);
         const endTime = new Date(date);
@@ -111,20 +88,8 @@ serve(async (req) => {
         });
 
       case 'bookAppointment':
-        const { startTime, endTime, summary, description } = await req.json();
-        
-        // Get tokens from Authorization header
-        const bookingAuthHeader = req.headers.get('Authorization');
-        if (!bookingAuthHeader) {
-          throw new Error('Authorization header missing');
-        }
-        
-        const bookingTokens = JSON.parse(bookingAuthHeader);
-        oauth2Client.setCredentials(bookingTokens);
-        
-        const calendarApi = google.calendar({ version: 'v3', auth: oauth2Client });
-        const event = await calendarApi.events.insert({
-          calendarId: 'primary',
+        const event = await calendar.events.insert({
+          calendarId,
           requestBody: {
             summary,
             description,
