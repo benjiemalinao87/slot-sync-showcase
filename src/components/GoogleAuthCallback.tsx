@@ -1,7 +1,6 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { handleAuthCallback } from '@/utils/googleCalendarAuth';
 import { useToast } from '@/components/ui/use-toast';
 
 const GoogleAuthCallback = () => {
@@ -9,36 +8,23 @@ const GoogleAuthCallback = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const handleAuth = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      
-      if (code) {
-        try {
-          await handleAuthCallback(code);
-          toast({
-            title: "Authentication Successful",
-            description: "Successfully connected to Google Calendar",
-          });
-          navigate('/');
-        } catch (error) {
-          toast({
-            title: "Authentication Failed",
-            description: "Failed to connect to Google Calendar",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-
-    handleAuth();
+    // Since we're using a company calendar that's pre-authenticated,
+    // we don't need to handle OAuth callback for individual users
+    
+    toast({
+      title: "Calendar System Ready",
+      description: "The booking system is already connected to the company calendar.",
+    });
+    
+    // Redirect back to the main page
+    navigate('/');
   }, [navigate, toast]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Processing Authentication...</h1>
-        <p>Please wait while we complete the setup.</p>
+        <h1 className="text-2xl font-bold mb-4">Calendar System Ready</h1>
+        <p>Redirecting you back to the booking page...</p>
       </div>
     </div>
   );
