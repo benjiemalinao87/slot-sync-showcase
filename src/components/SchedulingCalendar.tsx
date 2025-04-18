@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CalendarClock, MapPin, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getAvailability } from "@/utils/calendarStorage";
+import { getAvailableSlots, bookAppointment, initializeGoogleAuth } from "@/utils/googleCalendarAuth";
 import { TimeSlot } from "@/types/calendar";
-import { initializeGoogleAuth, getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -112,7 +111,7 @@ const SchedulingCalendar = () => {
     const fetchSlots = async () => {
       if (date && selectedRep) {
         try {
-          const slots = await getAvailableSlots('primary', date, date);
+          const slots = await getAvailableSlots('primary', date);
           setTimeSlots(slots);
         } catch (error) {
           toast({
@@ -161,7 +160,7 @@ const SchedulingCalendar = () => {
       });
 
       // Refresh the time slots
-      const newSlots = await getAvailableSlots('primary', date!, date!);
+      const newSlots = await getAvailableSlots('primary', date!);
       setTimeSlots(newSlots);
     } catch (error) {
       toast({
