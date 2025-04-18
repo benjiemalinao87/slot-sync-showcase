@@ -5,7 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarClock, MapPin, Users } from "lucide-react";
+import { CalendarClock, MapPin } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { generateMockTimeSlots, saveAvailability, getAvailability } from "@/utils/calendarStorage";
+import { TimeSlot } from "@/types/calendar";
 
 const salesReps = [
   {
@@ -34,6 +37,45 @@ const salesReps = [
 const SchedulingCalendar = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [selectedRep, setSelectedRep] = React.useState<number | null>(null);
+  const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([]);
+  const { toast } = useToast();
+
+  // Load or generate time slots when date or selected rep changes
+  React.useEffect(() => {
+    if (date && selectedRep) {
+      const storedAvailability = getAvailability();
+      const repAvailability = storedAvailability.find(a => a.id === selectedRep);
+      
+      if (repAvailability) {
+        setTimeSlots(repAvailability.timeSlots);
+      } else {
+        const newSlots = generateMockTimeSlots(date);
+        setTimeSlots(newSlots);
+        
+        // Save to localStorage
+        saveAvailability([
+          ...storedAvailability,
+          { id: selectedRep, name: salesReps.find(rep => rep.id === selectedRep)?.name || '', timeSlots: newSlots }
+        ]);
+      }
+    }
+  }, [date, selectedRep]);
+
+  const handleTimeSlotSelect = (slot: TimeSlot) => {
+    if (!slot.isAvailable) {
+      toast({
+        title: "Time slot unavailable",
+        description: "Please select another time slot",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Time slot selected",
+      description: `Selected time: ${slot.time}`,
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -58,13 +100,19 @@ const SchedulingCalendar = () => {
               <div className="mt-6">
                 <h3 className="text-lg font-medium mb-4">Available Time Slots</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM"].map((time) => (
+                  {timeSlots.map((slot) => (
                     <Button
-                      key={time}
+                      key={slot.id}
                       variant="outline"
-                      className="hover:bg-purple-50 hover:border-purple-200"
+                      className={`${
+                        slot.isAvailable
+                          ? "hover:bg-purple-50 hover:border-purple-200"
+                          : "opacity-50 cursor-not-allowed"
+                      }`}
+                      onClick={() => handleTimeSlotSelect(slot)}
+                      disabled={!slot.isAvailable}
                     >
-                      {time}
+                      {slot.time}
                     </Button>
                   ))}
                 </div>
