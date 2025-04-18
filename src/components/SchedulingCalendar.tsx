@@ -1,14 +1,14 @@
-
 import React from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarClock, MapPin } from "lucide-react";
+import { CalendarClock, MapPin, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { generateMockTimeSlots, saveAvailability, getAvailability } from "@/utils/calendarStorage";
 import { TimeSlot } from "@/types/calendar";
+import { initializeGoogleAuth } from "@/utils/googleCalendarAuth";
 
 const salesReps = [
   {
@@ -40,7 +40,6 @@ const SchedulingCalendar = () => {
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([]);
   const { toast } = useToast();
 
-  // Load or generate time slots when date or selected rep changes
   React.useEffect(() => {
     if (date && selectedRep) {
       const storedAvailability = getAvailability();
@@ -52,7 +51,6 @@ const SchedulingCalendar = () => {
         const newSlots = generateMockTimeSlots(date);
         setTimeSlots(newSlots);
         
-        // Save to localStorage
         saveAvailability([
           ...storedAvailability,
           { id: selectedRep, name: salesReps.find(rep => rep.id === selectedRep)?.name || '', timeSlots: newSlots }
@@ -77,16 +75,30 @@ const SchedulingCalendar = () => {
     });
   };
 
+  const handleConnectCalendar = () => {
+    initializeGoogleAuth();
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="lg:w-2/3">
           <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl font-semibold text-gray-800">Company Availability</CardTitle>
-              <CardDescription className="text-gray-600">
-                Select a date to view available time slots
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl font-semibold text-gray-800">Company Availability</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Select a date to view available time slots
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={handleConnectCalendar}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                Connect Calendar
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="flex justify-center p-4">
