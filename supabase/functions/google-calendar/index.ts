@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
@@ -25,8 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    const { action } = await req.json();
 
     if (!action) {
       throw new Error('No action specified');
@@ -52,7 +52,15 @@ serve(async (req) => {
 
       case 'getAvailableSlots':
         const { date, calendarId } = await req.json();
-        oauth2Client.setCredentials(JSON.parse(req.headers.get('Authorization') || '{}'));
+        
+        // Get tokens from Authorization header
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+          throw new Error('Authorization header missing');
+        }
+        
+        const tokens = JSON.parse(authHeader);
+        oauth2Client.setCredentials(tokens);
         
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         const startTime = new Date(date);
@@ -85,8 +93,8 @@ serve(async (req) => {
         // Mark busy slots as unavailable
         const busySlots = response.data.calendars?.[calendarId]?.busy || [];
         const availableSlots = slots.map(slot => {
-          const slotStart = new Date(`${date}T${slot.startTime}`);
-          const slotEnd = new Date(`${date}T${slot.endTime}`);
+          const slotStart = new Date(`${date.split('T')[0]}T${slot.startTime}`);
+          const slotEnd = new Date(`${date.split('T')[0]}T${slot.endTime}`);
           
           const isOverlapping = busySlots.some(busySlot => {
             const busyStart = new Date(busySlot.start);
@@ -106,7 +114,15 @@ serve(async (req) => {
 
       case 'bookAppointment':
         const { startTime, endTime, summary, description } = await req.json();
-        oauth2Client.setCredentials(JSON.parse(req.headers.get('Authorization') || '{}'));
+        
+        // Get tokens from Authorization header
+        const bookingAuthHeader = req.headers.get('Authorization');
+        if (!bookingAuthHeader) {
+          throw new Error('Authorization header missing');
+        }
+        
+        const bookingTokens = JSON.parse(bookingAuthHeader);
+        oauth2Client.setCredentials(bookingTokens);
         
         const calendarApi = google.calendar({ version: 'v3', auth: oauth2Client });
         const event = await calendarApi.events.insert({

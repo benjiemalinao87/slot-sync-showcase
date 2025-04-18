@@ -33,6 +33,11 @@ export const handleAuthCallback = async (code: string) => {
   }
 };
 
+export const isGoogleAuthenticated = () => {
+  const tokens = localStorage.getItem('google_auth_tokens');
+  return !!tokens;
+};
+
 export const getAvailableSlots = async (calendarId: string, date: Date) => {
   try {
     const tokens = localStorage.getItem('google_auth_tokens');
@@ -45,6 +50,9 @@ export const getAvailableSlots = async (calendarId: string, date: Date) => {
         date: date.toISOString(), 
         calendarId,
         action: 'getAvailableSlots' 
+      },
+      headers: {
+        Authorization: tokens
       }
     });
 
@@ -76,6 +84,9 @@ export const bookAppointment = async (
         summary, 
         description,
         action: 'bookAppointment'
+      },
+      headers: {
+        Authorization: tokens
       }
     });
 
