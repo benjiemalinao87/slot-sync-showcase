@@ -1,11 +1,10 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
 
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!;
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!;
-const REDIRECT_URI = 'http://localhost:5173/auth/callback'; // Update this for production
+const REDIRECT_URI = 'https://cobalt-book-a-call.netlify.app/auth/callback'; 
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

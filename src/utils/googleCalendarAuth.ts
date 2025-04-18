@@ -1,12 +1,12 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export const GOOGLE_REDIRECT_URI = `${window.location.origin}/auth/callback`;
+export const GOOGLE_REDIRECT_URI = `https://cobalt-book-a-call.netlify.app/auth/callback`;
 
 export const initializeGoogleAuth = async () => {
   try {
     const { data, error } = await supabase.functions.invoke('google-calendar', {
-      query: { action: 'getAuthUrl' }
+      body: { action: 'getAuthUrl' }
     });
 
     if (error) throw error;
@@ -20,13 +20,11 @@ export const initializeGoogleAuth = async () => {
 export const handleAuthCallback = async (code: string) => {
   try {
     const { data, error } = await supabase.functions.invoke('google-calendar', {
-      body: { code },
-      query: { action: 'getToken' }
+      body: { code, action: 'getToken' }
     });
 
     if (error) throw error;
 
-    // Store tokens in localStorage
     localStorage.setItem('google_auth_tokens', JSON.stringify(data.tokens));
     return true;
   } catch (error) {
@@ -43,9 +41,11 @@ export const getAvailableSlots = async (calendarId: string, date: Date) => {
     }
 
     const { data, error } = await supabase.functions.invoke('google-calendar', {
-      body: { date: date.toISOString(), calendarId },
-      headers: { Authorization: tokens },
-      query: { action: 'getAvailableSlots' }
+      body: { 
+        date: date.toISOString(), 
+        calendarId,
+        action: 'getAvailableSlots' 
+      }
     });
 
     if (error) throw error;
@@ -70,9 +70,13 @@ export const bookAppointment = async (
     }
 
     const { data, error } = await supabase.functions.invoke('google-calendar', {
-      body: { startTime, endTime, summary, description },
-      headers: { Authorization: tokens },
-      query: { action: 'bookAppointment' }
+      body: { 
+        startTime, 
+        endTime, 
+        summary, 
+        description,
+        action: 'bookAppointment'
+      }
     });
 
     if (error) throw error;
