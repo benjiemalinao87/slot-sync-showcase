@@ -176,45 +176,45 @@ const SchedulingCalendar = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="lg:w-2/3">
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-purple-50 to-transparent p-6 rounded-t-lg">
               <div>
-                <CardTitle className="text-2xl font-semibold text-gray-800">Company Availability</CardTitle>
+                <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Book Your Appointment</CardTitle>
                 <CardDescription className="text-gray-600">
-                  Select a date to view available time slots
+                  Select your preferred date and time
                 </CardDescription>
               </div>
               <Button
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-colors"
                 onClick={handleConnectCalendar}
               >
-                <CalendarIcon className="h-4 w-4" />
-                Connect Calendar
+                <CalendarIcon className="h-4 w-4 text-purple-500" />
+                <span>Sync Calendar</span>
               </Button>
             </CardHeader>
-            <CardContent>
-              <div className="flex justify-center p-4">
+            <CardContent className="p-6">
+              <div className="flex justify-center mb-8">
                 <Calendar
                   mode="single"
                   selected={date}
                   onSelect={setDate}
-                  className="rounded-md border shadow pointer-events-auto"
+                  className="rounded-lg border-purple-100 shadow-md hover:shadow-lg transition-shadow"
                 />
               </div>
-              <div className="mt-6">
-                <h3 className="text-lg font-medium mb-4">Available Time Slots</h3>
-                <div className="grid grid-cols-3 gap-2">
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">Available Time Slots</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {timeSlots.map((slot) => (
                     <Button
                       key={slot.id}
-                      variant="outline"
-                      className={`${
+                      variant={slot.isAvailable ? "outline" : "ghost"}
+                      className={`w-full ${
                         slot.isAvailable
-                          ? "hover:bg-purple-50 hover:border-purple-200"
+                          ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700"
                           : "opacity-50 cursor-not-allowed"
                       }`}
                       onClick={() => handleTimeSlotSelect(slot)}
@@ -230,9 +230,9 @@ const SchedulingCalendar = () => {
         </div>
 
         <div className="lg:w-1/3">
-          <Card className="border-0 shadow-lg">
+          <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className="text-2xl font-semibold text-gray-800">Sales Representatives</CardTitle>
+              <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Sales Representatives</CardTitle>
               <CardDescription className="text-gray-600">
                 Choose your preferred representative
               </CardDescription>
@@ -244,22 +244,24 @@ const SchedulingCalendar = () => {
                     <Card
                       key={rep.id}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedRep === rep.id ? 'ring-2 ring-purple-400' : ''
+                        selectedRep === rep.id 
+                          ? 'ring-2 ring-purple-400 bg-purple-50' 
+                          : 'hover:border-purple-200'
                       }`}
                       onClick={() => setSelectedRep(rep.id)}
                     >
                       <CardContent className="flex items-center gap-4 p-4">
-                        <Avatar className="h-12 w-12">
+                        <Avatar className="h-12 w-12 ring-2 ring-purple-100">
                           <img src={rep.image} alt={rep.name} className="object-cover" />
                         </Avatar>
                         <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{rep.name}</h3>
+                          <h3 className="font-semibold text-gray-900">{rep.name}</h3>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <MapPin className="h-4 w-4" />
+                            <MapPin className="h-4 w-4 text-purple-400" />
                             <span>{rep.region}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                            <CalendarClock className="h-4 w-4" />
+                            <CalendarClock className="h-4 w-4 text-purple-400" />
                             <span>{rep.availability}</span>
                           </div>
                         </div>
