@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -217,19 +216,6 @@ const SchedulingCalendar = () => {
                   <Alert variant="destructive" className="mb-4">
                     <AlertTitle>Error</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
-                    {error.includes('GOOGLE_REFRESH_TOKEN') && (
-                      <div className="mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="mt-2"
-                          onClick={handleAuthSetup}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Set up Google Calendar Auth
-                        </Button>
-                      </div>
-                    )}
                   </Alert>
                 )}
                 {selectedRep ? (
@@ -316,14 +302,6 @@ const SchedulingCalendar = () => {
               </ScrollArea>
             </CardContent>
             <CardFooter className="px-6 py-4 bg-gray-50 flex justify-center">
-              <Button 
-                variant="outline" 
-                className="w-full flex items-center justify-center gap-2"
-                onClick={handleAuthSetup}
-              >
-                <CalendarPlus className="h-4 w-4" />
-                Set up Google Calendar
-              </Button>
             </CardFooter>
           </Card>
         </div>
