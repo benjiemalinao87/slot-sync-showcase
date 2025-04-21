@@ -1,9 +1,16 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 // This is now the company's calendar where appointments will be booked
 const COMPANY_CALENDAR_ID = 'primary';
+
+// Helper function to convert 24-hour time to 12-hour format
+const formatTimeTo12Hour = (time: string) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const formattedHours = hours % 12 || 12;
+  return `${formattedHours}:${minutes === 0 ? '00' : minutes} ${period}`;
+};
 
 export const getAvailableSlots = async (date: Date) => {
   try {
@@ -14,6 +21,15 @@ export const getAvailableSlots = async (date: Date) => {
         action: 'getAvailableSlots' 
       }
     });
+
+    // If data contains slots, convert them to 12-hour format
+    if (data && data.slots) {
+      data.slots = data.slots.map((slot: TimeSlot) => ({
+        ...slot,
+        startTime: formatTimeTo12Hour(slot.startTime),
+        endTime: formatTimeTo12Hour(slot.endTime)
+      }));
+    }
 
     if (error) {
       console.error('Edge function error:', error);
@@ -42,14 +58,8 @@ export const getAvailableSlots = async (date: Date) => {
   } catch (error) {
     console.error('Failed to fetch available slots:', error);
     
-    // Return mock data when in development or when there's an error
-    // This helps prevent the UI from breaking during setup
-    if (process.env.NODE_ENV === 'development' || true) {
-      console.log('Returning mock slots due to API error');
-      return generateMockTimeSlots();
-    }
-    
-    throw error;
+    // Return mock slots in 12-hour format
+    return generateMockTimeSlots();
   }
 };
 
@@ -104,10 +114,12 @@ export const bookAppointment = async (
 const generateMockTimeSlots = () => {
   const slots = [];
   for (let hour = 9; hour < 17; hour++) {
+    const startTimeStr = `${hour}:00`;
+    const endTimeStr = `${hour + 1}:00`;
     slots.push({
       id: `mock-${hour}`,
-      startTime: `${hour}:00`,
-      endTime: `${hour + 1}:00`,
+      startTime: formatTimeTo12Hour(startTimeStr),
+      endTime: formatTimeTo12Hour(endTimeStr),
       isAvailable: Math.random() > 0.3 // Random availability
     });
   }
