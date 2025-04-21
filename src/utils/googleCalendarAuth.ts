@@ -146,7 +146,16 @@ export const getGoogleAuthUrl = () => {
   url.searchParams.append('client_id', GOOGLE_CLIENT_ID);
   url.searchParams.append('redirect_uri', REDIRECT_URI);
   url.searchParams.append('response_type', 'code');
-  url.searchParams.append('scope', 'https://www.googleapis.com/auth/calendar');
+  
+  // Updated scopes with all the required permissions
+  url.searchParams.append('scope', [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
+  ].join(' '));
+  
   url.searchParams.append('access_type', 'offline');
   url.searchParams.append('prompt', 'consent');
   
