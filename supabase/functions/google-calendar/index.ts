@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
@@ -6,7 +5,7 @@ import { google } from "npm:googleapis@126.0.1"
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!;
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!;
 const GOOGLE_REFRESH_TOKEN = Deno.env.get('GOOGLE_REFRESH_TOKEN');
-const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/';
+const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/auth/callback';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +18,6 @@ const oauth2Client = new google.auth.OAuth2(
   REDIRECT_URI
 );
 
-// Set up authentication with the company's refresh token if available
 if (GOOGLE_REFRESH_TOKEN) {
   oauth2Client.setCredentials({
     refresh_token: GOOGLE_REFRESH_TOKEN
@@ -42,7 +40,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if we have a refresh token configured - except for handleAuthCallback action
     if (!GOOGLE_REFRESH_TOKEN && action !== 'handleAuthCallback') {
       console.error("GOOGLE_REFRESH_TOKEN is not set in environment variables");
       return new Response(
@@ -61,7 +58,6 @@ serve(async (req) => {
 
     switch (action) {
       case 'handleAuthCallback': {
-        // This handles the OAuth code exchange to get refresh token
         const { code } = requestData;
         
         if (!code) {
@@ -75,11 +71,10 @@ serve(async (req) => {
         }
         
         try {
-          // Exchange code for tokens
+          oauth2Client.redirectUri_ = REDIRECT_URI;
+          
           const { tokens } = await oauth2Client.getToken(code);
           
-          // You would normally store these tokens securely
-          // For this demo, we just log them so you can copy the refresh token
           console.log("Auth successful! Copy this refresh token to your Supabase secrets:");
           console.log("REFRESH TOKEN:", tokens.refresh_token);
           
@@ -87,7 +82,7 @@ serve(async (req) => {
             JSON.stringify({ 
               success: true, 
               message: "Auth successful! Check edge function logs for the refresh token.",
-              refreshToken: tokens.refresh_token // Include refresh token in the response for debugging
+              refreshToken: tokens.refresh_token 
             }), 
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -134,7 +129,6 @@ serve(async (req) => {
             },
           });
 
-          // Generate all possible time slots
           const slots = [];
           for (let hour = 9; hour < 17; hour++) {
             const slotStart = new Date(date);
@@ -148,7 +142,6 @@ serve(async (req) => {
             });
           }
 
-          // Mark busy slots as unavailable
           const busySlots = response.data.calendars?.[calendarId]?.busy || [];
           const availableSlots = slots.map(slot => {
             const slotStart = new Date(`${date.split('T')[0]}T${slot.startTime}`);

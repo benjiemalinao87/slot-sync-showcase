@@ -139,7 +139,7 @@ export const handleAuthCallback = async (code: string) => {
 // Add a function to generate the OAuth URL for authentication
 export const getGoogleAuthUrl = () => {
   const GOOGLE_CLIENT_ID = "872816584793-loe6iko2in3t5apodfnve0j6foc7l60a.apps.googleusercontent.com";
-  const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/';
+  const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/auth/callback';
   
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.searchParams.append('client_id', GOOGLE_CLIENT_ID);

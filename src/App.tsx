@@ -19,7 +19,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth/callback" element={<GoogleAuthCallback />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<GoogleAuthCallback />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
