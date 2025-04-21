@@ -5,7 +5,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { handleAuthCallback } from '@/utils/googleCalendarAuth';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Clipboard, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Clipboard, AlertCircle, CheckCircle2, KeyRound } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const GoogleAuthCallback = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const GoogleAuthCallback = () => {
   const [refreshToken, setRefreshToken] = useState('');
   const [processing, setProcessing] = useState(true);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const processAuthCode = async () => {
@@ -31,11 +33,11 @@ const GoogleAuthCallback = () => {
           if (result.success) {
             toast({
               title: "Auth Code Processed Successfully",
-              description: "Check your Supabase Edge Function logs to get the refresh token. Add it to your Supabase secrets as GOOGLE_REFRESH_TOKEN.",
+              description: "Copy the refresh token to add it to your Supabase secrets.",
             });
             
             setStatus('Auth code processed successfully. Copy the refresh token below to add to your Supabase secrets.');
-            setRefreshToken(result.refreshToken || 'Check Supabase Edge Function logs for the refresh token');
+            setRefreshToken(result.refreshToken || '');
           } else {
             throw new Error(result.error || 'Unknown error processing auth code');
           }
@@ -43,7 +45,7 @@ const GoogleAuthCallback = () => {
           console.error('Authorization error:', error);
           toast({
             title: "Authentication Failed",
-            description: "Failed to process authorization code. See console for details.",
+            description: error.message || "Failed to process authorization code.",
             variant: "destructive",
           });
           setError(error.message || 'Failed to process authorization code');
@@ -69,10 +71,14 @@ const GoogleAuthCallback = () => {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(refreshToken);
+      setCopied(true);
       toast({
         title: "Copied to clipboard",
         description: "Refresh token copied to clipboard successfully.",
       });
+      
+      // Reset copied status after 2 seconds
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       toast({
         title: "Copy failed",
@@ -87,66 +93,77 @@ const GoogleAuthCallback = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full">
-        <h1 className="text-2xl font-bold mb-4">Google Calendar Auth</h1>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+      <Card className="w-full max-w-md shadow-xl border-purple-100">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent">
+          <CardTitle className="text-2xl font-bold text-purple-900">Google Calendar Auth</CardTitle>
+          <CardDescription>Authentication process results</CardDescription>
+        </CardHeader>
         
-        {processing ? (
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-            <p>{status}</p>
-          </div>
-        ) : error ? (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            <Alert className="mb-6 bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-800">Success</AlertTitle>
-              <AlertDescription className="text-green-700">{status}</AlertDescription>
+        <CardContent className="pt-6 space-y-4">
+          {processing ? (
+            <div className="flex flex-col items-center justify-center space-y-4 py-8">
+              <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-lg font-medium text-gray-700">{status}</p>
+            </div>
+          ) : error ? (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
-            
-            {refreshToken && (
-              <div className="mb-6">
-                <p className="font-semibold mb-2">Your Refresh Token:</p>
-                <div className="relative">
-                  <pre className="bg-gray-100 p-3 rounded-md text-xs overflow-x-auto text-left">
-                    {refreshToken}
-                  </pre>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="absolute top-2 right-2"
-                    onClick={copyToClipboard}
-                  >
-                    <Clipboard className="h-4 w-4" />
-                  </Button>
+          ) : (
+            <>
+              <Alert className="bg-green-50 border-green-200">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800">Success</AlertTitle>
+                <AlertDescription className="text-green-700">{status}</AlertDescription>
+              </Alert>
+              
+              {refreshToken && (
+                <div className="mt-8">
+                  <div className="flex items-center gap-2 mb-2">
+                    <KeyRound className="h-5 w-5 text-purple-500" />
+                    <h3 className="font-semibold text-lg">Your Refresh Token:</h3>
+                  </div>
+                  <div className="relative mt-2 mb-6">
+                    <pre className="bg-gray-100 p-4 rounded-md text-xs overflow-x-auto text-left whitespace-pre-wrap break-all border border-gray-300">
+                      {refreshToken}
+                    </pre>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className={`absolute top-2 right-2 ${copied ? 'bg-green-100 text-green-700' : ''}`}
+                      onClick={copyToClipboard}
+                    >
+                      <Clipboard className="h-4 w-4 mr-1" />
+                      {copied ? 'Copied!' : 'Copy'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
 
-        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-left">
-          <p className="font-semibold mb-2">Next steps:</p>
-          <ol className="list-decimal pl-5 space-y-2">
-            <li>Copy the refresh token displayed above or check your Supabase Edge Function logs</li>
-            <li>Add it to your Supabase secrets as <code className="bg-gray-200 px-1 rounded">GOOGLE_REFRESH_TOKEN</code></li>
-            <li>Restart your application to use the new token</li>
-          </ol>
-        </div>
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-left">
+            <p className="font-semibold mb-2">Next steps:</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li>Copy the refresh token displayed above</li>
+              <li>Add it to your Supabase secrets as <code className="bg-gray-200 px-1 py-0.5 rounded">GOOGLE_REFRESH_TOKEN</code></li>
+              <li>Restart your application to use the new token</li>
+            </ol>
+          </div>
+        </CardContent>
         
-        <Button 
-          onClick={handleGoHome}
-          className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-        >
-          Return to Home
-        </Button>
-      </div>
+        <CardFooter className="flex justify-center pt-2 pb-6">
+          <Button 
+            onClick={handleGoHome}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            Return to Home
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

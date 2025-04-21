@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
@@ -6,7 +5,8 @@ import { google } from "npm:googleapis@126.0.1"
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!;
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!;
 const GOOGLE_REFRESH_TOKEN = Deno.env.get('GOOGLE_REFRESH_TOKEN');
-const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/auth/callback';
+const REDIRECT_URI_PROD = 'https://appointment-request-with-cobalt.netlify.app/auth/callback';
+const REDIRECT_URI_LOCAL = 'http://localhost:5173/auth/callback';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +16,7 @@ const corsHeaders = {
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
-  REDIRECT_URI
+  REDIRECT_URI_PROD
 );
 
 if (GOOGLE_REFRESH_TOKEN) {
@@ -72,10 +72,14 @@ serve(async (req) => {
         }
         
         try {
-          // Force set the redirect URI to ensure it matches what we send
-          oauth2Client.redirectUri_ = REDIRECT_URI;
+          const originHeader = req.headers.get('origin') || '';
+          const redirectUri = originHeader.includes('localhost') 
+            ? REDIRECT_URI_LOCAL 
+            : REDIRECT_URI_PROD;
           
-          console.log("Exchanging code for tokens with redirect URI:", REDIRECT_URI);
+          oauth2Client.redirectUri_ = redirectUri;
+          
+          console.log("Exchanging code for tokens with redirect URI:", redirectUri);
           
           const { tokens } = await oauth2Client.getToken(code);
           
@@ -96,7 +100,8 @@ serve(async (req) => {
           console.error("Error getting tokens:", tokenError);
           return new Response(
             JSON.stringify({ 
-              error: `Failed to exchange code for tokens: ${tokenError.message}` 
+              error: `Failed to exchange code for tokens: ${tokenError.message}`,
+              details: tokenError
             }), 
             { 
               status: 400, 
