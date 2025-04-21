@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
@@ -185,7 +186,7 @@ serve(async (req) => {
       }
 
       case 'bookAppointment': {
-        const { startTime, endTime, summary, description, calendarId } = requestData;
+        const { startTime, endTime, summary, description, calendarId, timeZone } = requestData;
         
         if (!startTime || !endTime) {
           return new Response(
@@ -197,14 +198,23 @@ serve(async (req) => {
           );
         }
 
+        // Default to UTC if no time zone is provided
+        const eventTimeZone = timeZone || 'UTC';
+
         try {
           const event = await calendar.events.insert({
             calendarId,
             requestBody: {
               summary,
               description,
-              start: { dateTime: startTime },
-              end: { dateTime: endTime },
+              start: { 
+                dateTime: startTime,
+                timeZone: eventTimeZone
+              },
+              end: { 
+                dateTime: endTime,
+                timeZone: eventTimeZone
+              },
             },
           });
 

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -62,10 +63,14 @@ export const bookAppointment = async (
   }
 ) => {
   try {
+    // Add timeZone information to the request
+    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     const { data, error } = await supabase.functions.invoke('google-calendar', {
       body: { 
         startTime, 
         endTime, 
+        timeZone: userTimeZone, // Pass the user's time zone
         summary: `Meeting with ${bookingDetails.name}`,
         description: `Booking details:\nName: ${bookingDetails.name}\nEmail: ${bookingDetails.email}\nNotes: ${bookingDetails.notes || 'No notes provided'}`,
         calendarId: COMPANY_CALENDAR_ID,
