@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -138,7 +139,11 @@ export const handleAuthCallback = async (code: string) => {
 
 // Add a function to generate the OAuth URL for authentication
 export const getGoogleAuthUrl = () => {
+  // Make sure this client ID matches EXACTLY what's in your Google Cloud Console
   const GOOGLE_CLIENT_ID = "872816584793-loe6iko2in3t5apodfnve0j6foc7l60a.apps.googleusercontent.com";
+  
+  // The redirect URI must be an authorized redirect URI in Google Cloud Console
+  // Make sure to add this exact URL to your authorized redirect URIs in Google Cloud Console
   const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/auth/callback';
   
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');

@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis@126.0.1"
@@ -71,7 +72,10 @@ serve(async (req) => {
         }
         
         try {
+          // Force set the redirect URI to ensure it matches what we send
           oauth2Client.redirectUri_ = REDIRECT_URI;
+          
+          console.log("Exchanging code for tokens with redirect URI:", REDIRECT_URI);
           
           const { tokens } = await oauth2Client.getToken(code);
           
