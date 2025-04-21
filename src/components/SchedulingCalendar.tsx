@@ -1,43 +1,27 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarClock, MapPin, CalendarPlus, ExternalLink } from "lucide-react";
+import { CalendarClock, MapPin } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getAvailableSlots, bookAppointment, getGoogleAuthUrl } from "@/utils/googleCalendarAuth";
+import { getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
 import { TimeSlot } from "@/types/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const salesReps = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    image: "https://i.pravatar.cc/150?img=1",
-    region: "West Coast",
-    availability: "Mon-Fri, 9AM-5PM PST"
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    image: "https://i.pravatar.cc/150?img=2",
-    region: "East Coast",
-    availability: "Mon-Fri, 10AM-6PM EST"
-  },
-  {
-    id: 3,
-    name: "Emily Rodriguez",
-    image: "https://i.pravatar.cc/150?img=3",
-    region: "Central",
-    availability: "Mon-Fri, 9AM-5PM CST"
-  }
-];
+const singleRep = {
+  id: 1,
+  name: "Sarah Johnson",
+  image: "https://i.pravatar.cc/150?img=1",
+  region: "West Coast",
+  availability: "Mon-Fri, 9AM-5PM PST"
+};
 
-const BookingDialog = ({ isOpen, onClose, slot, onBook, selectedRep }: any) => {
+const BookingDialog = ({ isOpen, onClose, slot, onBook }: any) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
@@ -48,8 +32,7 @@ const BookingDialog = ({ isOpen, onClose, slot, onBook, selectedRep }: any) => {
       name,
       email,
       notes,
-      slot,
-      rep: selectedRep
+      slot
     });
     onClose();
   };
@@ -102,7 +85,6 @@ const BookingDialog = ({ isOpen, onClose, slot, onBook, selectedRep }: any) => {
 
 const SchedulingCalendar = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const [selectedRep, setSelectedRep] = React.useState<number | null>(null);
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = React.useState<TimeSlot | null>(null);
   const [isBookingOpen, setIsBookingOpen] = React.useState(false);
@@ -111,7 +93,7 @@ const SchedulingCalendar = () => {
   const { toast } = useToast();
 
   const fetchSlots = async () => {
-    if (date && selectedRep) {
+    if (date) {
       setIsLoading(true);
       setError(null);
       try {
@@ -132,10 +114,10 @@ const SchedulingCalendar = () => {
   };
 
   useEffect(() => {
-    if (date && selectedRep) {
+    if (date) {
       fetchSlots();
     }
-  }, [date, selectedRep]);
+  }, [date]);
 
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     if (!slot.isAvailable) {
@@ -153,10 +135,9 @@ const SchedulingCalendar = () => {
 
   const handleBooking = async (bookingDetails: any) => {
     try {
-      const rep = salesReps.find(r => r.id === selectedRep);
       const startTime = `${date?.toISOString().split('T')[0]}T${bookingDetails.slot.startTime}:00`;
       const endTime = `${date?.toISOString().split('T')[0]}T${bookingDetails.slot.endTime}:00`;
-      
+
       await bookAppointment(
         startTime,
         endTime,
@@ -169,10 +150,9 @@ const SchedulingCalendar = () => {
 
       toast({
         title: "Appointment Booked",
-        description: `Your appointment has been scheduled with ${rep?.name} for ${startTime}`,
+        description: `Your appointment has been scheduled with ${singleRep.name} for ${startTime}`,
       });
 
-      // Refresh the time slots
       fetchSlots();
     } catch (error: any) {
       toast({
@@ -181,11 +161,6 @@ const SchedulingCalendar = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const handleAuthSetup = () => {
-    const authUrl = getGoogleAuthUrl();
-    window.open(authUrl, '_blank');
   };
 
   return (
@@ -218,37 +193,31 @@ const SchedulingCalendar = () => {
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-                {selectedRep ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {isLoading ? (
-                      <div className="col-span-full flex justify-center py-8">
-                        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    ) : timeSlots.length > 0 ? timeSlots.map((slot) => (
-                      <Button
-                        key={slot.id}
-                        variant={slot.isAvailable ? "outline" : "ghost"}
-                        className={`w-full ${
-                          slot.isAvailable
-                            ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700"
-                            : "opacity-50 cursor-not-allowed"
-                        }`}
-                        onClick={() => handleTimeSlotSelect(slot)}
-                        disabled={!slot.isAvailable}
-                      >
-                        {slot.startTime}
-                      </Button>
-                    )) : (
-                      <p className="text-gray-500 col-span-full text-center py-4">
-                        Select a date and sales representative to view available slots
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-4">
-                    Please select a sales representative to view available slots
-                  </p>
-                )}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {isLoading ? (
+                    <div className="col-span-full flex justify-center py-8">
+                      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : timeSlots.length > 0 ? timeSlots.map((slot) => (
+                    <Button
+                      key={slot.id}
+                      variant={slot.isAvailable ? "outline" : "ghost"}
+                      className={`w-full ${
+                        slot.isAvailable
+                          ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700"
+                          : "opacity-50 cursor-not-allowed"
+                      }`}
+                      onClick={() => handleTimeSlotSelect(slot)}
+                      disabled={!slot.isAvailable}
+                    >
+                      {slot.startTime}
+                    </Button>
+                  )) : (
+                    <p className="text-gray-500 col-span-full text-center py-4">
+                      Select a date to view available slots
+                    </p>
+                  )}
+                </div>
               </div>
             </CardContent>
             <CardFooter className="px-6 py-4 bg-gray-50 rounded-b-lg">
@@ -262,56 +231,37 @@ const SchedulingCalendar = () => {
         <div className="lg:w-1/3">
           <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
-              <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Sales Representatives</CardTitle>
+              <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Your Sales Representative</CardTitle>
               <CardDescription className="text-gray-600">
-                Choose your preferred representative
+                Meet our team member
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="space-y-4">
-                  {salesReps.map((rep) => (
-                    <Card
-                      key={rep.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedRep === rep.id 
-                          ? 'ring-2 ring-purple-400 bg-purple-50' 
-                          : 'hover:border-purple-200'
-                      }`}
-                      onClick={() => setSelectedRep(rep.id)}
-                    >
-                      <CardContent className="flex items-center gap-4 p-4">
-                        <Avatar className="h-12 w-12 ring-2 ring-purple-100">
-                          <img src={rep.image} alt={rep.name} className="object-cover" />
-                        </Avatar>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{rep.name}</h3>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <MapPin className="h-4 w-4 text-purple-400" />
-                            <span>{rep.region}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                            <CalendarClock className="h-4 w-4 text-purple-400" />
-                            <span>{rep.availability}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              <div className="flex flex-col items-center gap-4 py-4">
+                <Avatar className="h-16 w-16 ring-2 ring-purple-100">
+                  <img src={singleRep.image} alt={singleRep.name} className="object-cover rounded-full" />
+                </Avatar>
+                <div className="text-center">
+                  <h3 className="font-semibold text-gray-900 text-xl">{singleRep.name}</h3>
+                  <div className="flex justify-center items-center gap-2 text-sm text-gray-500 mt-1">
+                    <MapPin className="h-4 w-4 text-purple-400" />
+                    <span>{singleRep.region}</span>
+                  </div>
+                  <div className="flex justify-center items-center gap-2 text-sm text-gray-500 mt-1">
+                    <CalendarClock className="h-4 w-4 text-purple-400" />
+                    <span>{singleRep.availability}</span>
+                  </div>
                 </div>
-              </ScrollArea>
+              </div>
             </CardContent>
-            <CardFooter className="px-6 py-4 bg-gray-50 flex justify-center">
-            </CardFooter>
+            {/* No CardFooter needed here */}
           </Card>
         </div>
       </div>
-
       <BookingDialog
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
         slot={selectedSlot}
-        selectedRep={selectedRep}
         onBook={handleBooking}
       />
     </div>
