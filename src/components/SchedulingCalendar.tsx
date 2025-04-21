@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
+import { getAvailableSlots, convertToUserTimezone } from "@/utils/googleCalendarAuth";
 import { TimeSlot } from "@/types/calendar";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
-import { CalendarClock, Loader } from "lucide-react";
 
 const singleRep = {
   id: 1,
@@ -92,9 +86,15 @@ const SchedulingCalendar = () => {
   const [isBookingOpen, setIsBookingOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userTimezone, setUserTimezone] = useState('');
   const {
     toast
   } = useToast();
+
+  useEffect(() => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setUserTimezone(timezone);
+  }, []);
 
   const fetchSlots = async () => {
     if (date) {
@@ -233,9 +233,14 @@ const SchedulingCalendar = () => {
           </div>
         </CardContent>
         <CardFooter className="px-6 py-4 bg-gray-50 rounded-b-lg">
-          <p className="text-sm text-gray-500">
-            Appointments are in {singleRep.region} ({singleRep.availability})
-          </p>
+          <div className="w-full flex justify-between items-center">
+            <p className="text-sm text-gray-500">
+              Appointments are in West Coast (Mon-Fri, 9AM-5PM PST)
+            </p>
+            <p className="text-sm text-gray-500">
+              Your Timezone: {userTimezone}
+            </p>
+          </div>
         </CardFooter>
       </Card>
       <BookingDialog isOpen={isBookingOpen} onClose={() => setIsBookingOpen(false)} slot={selectedSlot} onBook={handleBooking} />

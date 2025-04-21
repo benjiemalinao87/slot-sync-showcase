@@ -1,15 +1,37 @@
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { format, utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 
 // This is now the company's calendar where appointments will be booked
 const COMPANY_CALENDAR_ID = 'primary';
+const COMPANY_TIMEZONE = 'America/Los_Angeles'; // Explicitly set West Coast timezone
 
-// Helper function to convert 24-hour time to 12-hour format
-const formatTimeTo12Hour = (time: string) => {
+// Helper function to convert time to user's local timezone
+export const convertToUserTimezone = (inputTime: Date, inputTimezone: string = COMPANY_TIMEZONE) => {
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zonedTime = utcToZonedTime(inputTime, inputTimezone);
+  return {
+    localTime: zonedTime,
+    userTimezone: userTimezone
+  };
+};
+
+// Helper function to convert 24-hour time to 12-hour format in user's timezone
+const formatTimeTo12Hour = (time: string, timezone: string = COMPANY_TIMEZONE) => {
   const [hours, minutes] = time.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const formattedHours = hours % 12 || 12;
-  return `${formattedHours}:${minutes === 0 ? '00' : minutes} ${period}`;
+  const fullDate = new Date();
+  fullDate.setHours(hours, minutes, 0, 0);
+  
+  const zonedTime = convertToUserTimezone(fullDate, timezone);
+  const localHours = zonedTime.localTime.getHours();
+  const localMinutes = zonedTime.localTime.getMinutes();
+  
+  const period = localHours >= 12 ? 'PM' : 'AM';
+  const formattedHours = localHours % 12 || 12;
+  
+  return {
+    timeString: `${formattedHours}:${localMinutes < 10 ? '0' : ''}${localMinutes} ${period}`,
+    timezone: zonedTime.userTimezone
+  };
 };
 
 export const getAvailableSlots = async (date: Date) => {
@@ -22,13 +44,19 @@ export const getAvailableSlots = async (date: Date) => {
       }
     });
 
-    // If data contains slots, convert them to 12-hour format
+    // If data contains slots, convert them to 12-hour format in user's timezone
     if (data && data.slots) {
-      data.slots = data.slots.map((slot: TimeSlot) => ({
-        ...slot,
-        startTime: formatTimeTo12Hour(slot.startTime),
-        endTime: formatTimeTo12Hour(slot.endTime)
-      }));
+      data.slots = data.slots.map((slot: TimeSlot) => {
+        const startTimeInfo = formatTimeTo12Hour(slot.startTime);
+        const endTimeInfo = formatTimeTo12Hour(slot.endTime);
+        
+        return {
+          ...slot,
+          startTime: startTimeInfo.timeString,
+          endTime: endTimeInfo.timeString,
+          userTimezone: startTimeInfo.timezone
+        };
+      });
     }
 
     if (error) {
