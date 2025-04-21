@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 // This is now the company's calendar where appointments will be booked
 const COMPANY_CALENDAR_ID = 'primary';
@@ -16,10 +17,23 @@ export const getAvailableSlots = async (date: Date) => {
 
     if (error) {
       console.error('Edge function error:', error);
-      throw error;
+      throw new Error(`Edge function error: ${error.message}`);
     }
     
-    if (!data || !data.slots) {
+    if (!data) {
+      console.error('No data returned from edge function');
+      throw new Error('No data returned from edge function');
+    }
+
+    if (data.error) {
+      console.error('API error:', data.error);
+      if (data.error.includes('No access, refresh token')) {
+        throw new Error('Google Calendar authentication not set up. Please configure GOOGLE_REFRESH_TOKEN in Supabase secrets.');
+      }
+      throw new Error(data.error);
+    }
+    
+    if (!data.slots) {
       console.error('No slots data returned:', data);
       throw new Error('No available slots were returned');
     }
@@ -60,7 +74,16 @@ export const bookAppointment = async (
       }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Edge function error:', error);
+      throw new Error(`Edge function error: ${error.message}`);
+    }
+
+    if (data?.error) {
+      console.error('API error:', data.error);
+      throw new Error(data.error);
+    }
+
     return true;
   } catch (error) {
     console.error('Failed to book appointment:', error);
@@ -97,10 +120,35 @@ export const handleAuthCallback = async (code: string) => {
       }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Edge function error:', error);
+      throw new Error(`Edge function error: ${error.message}`);
+    }
+
+    if (data?.error) {
+      console.error('Auth callback error:', data.error);
+      throw new Error(data.error);
+    }
+
     return data;
   } catch (error) {
     console.error('Failed to handle auth callback:', error);
     throw error;
   }
+};
+
+// Add a function to generate the OAuth URL for authentication
+export const getGoogleAuthUrl = () => {
+  const GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID"; // Replace with your actual client ID
+  const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/';
+  
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  url.searchParams.append('client_id', GOOGLE_CLIENT_ID);
+  url.searchParams.append('redirect_uri', REDIRECT_URI);
+  url.searchParams.append('response_type', 'code');
+  url.searchParams.append('scope', 'https://www.googleapis.com/auth/calendar');
+  url.searchParams.append('access_type', 'offline');
+  url.searchParams.append('prompt', 'consent');
+  
+  return url.toString();
 };

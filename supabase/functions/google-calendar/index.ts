@@ -32,8 +32,18 @@ serve(async (req) => {
   }
 
   try {
-    // Check if we have a refresh token configured
-    if (!GOOGLE_REFRESH_TOKEN) {
+    const requestData = await req.json();
+    const { action } = requestData;
+
+    if (!action) {
+      return new Response(
+        JSON.stringify({ error: 'No action specified' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if we have a refresh token configured - except for handleAuthCallback action
+    if (!GOOGLE_REFRESH_TOKEN && action !== 'handleAuthCallback') {
       console.error("GOOGLE_REFRESH_TOKEN is not set in environment variables");
       return new Response(
         JSON.stringify({ 
@@ -41,17 +51,10 @@ serve(async (req) => {
           help: "Add the GOOGLE_REFRESH_TOKEN to your Supabase Edge Function secrets." 
         }), 
         { 
-          status: 500, 
+          status: 200, // Sending 200 with error in body for easier client handling
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
-    }
-
-    const requestData = await req.json();
-    const { action } = requestData;
-
-    if (!action) {
-      throw new Error('No action specified');
     }
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -62,41 +65,67 @@ serve(async (req) => {
         const { code } = requestData;
         
         if (!code) {
-          throw new Error('No authorization code provided');
+          return new Response(
+            JSON.stringify({ error: 'No authorization code provided' }), 
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
         
-        // Exchange code for tokens
-        const { tokens } = await oauth2Client.getToken(code);
-        
-        // You would normally store these tokens securely
-        // For this demo, we just log them so you can copy the refresh token
-        console.log("Auth successful! Copy this refresh token to your Supabase secrets:");
-        console.log("REFRESH TOKEN:", tokens.refresh_token);
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: "Auth successful! Check edge function logs for the refresh token." 
-          }), 
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
+        try {
+          // Exchange code for tokens
+          const { tokens } = await oauth2Client.getToken(code);
+          
+          // You would normally store these tokens securely
+          // For this demo, we just log them so you can copy the refresh token
+          console.log("Auth successful! Copy this refresh token to your Supabase secrets:");
+          console.log("REFRESH TOKEN:", tokens.refresh_token);
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: "Auth successful! Check edge function logs for the refresh token.",
+              refreshToken: tokens.refresh_token // Include refresh token in the response for debugging
+            }), 
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        } catch (tokenError) {
+          console.error("Error getting tokens:", tokenError);
+          return new Response(
+            JSON.stringify({ 
+              error: `Failed to exchange code for tokens: ${tokenError.message}` 
+            }), 
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
       }
 
       case 'getAvailableSlots': {
         const { date, calendarId } = requestData;
         
         if (!date) {
-          throw new Error('Date is required for getAvailableSlots');
+          return new Response(
+            JSON.stringify({ error: 'Date is required for getAvailableSlots' }), 
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
 
-        const startTime = new Date(date);
-        startTime.setHours(0, 0, 0, 0);
-        const endTime = new Date(date);
-        endTime.setHours(23, 59, 59, 999);
-
         try {
+          const startTime = new Date(date);
+          startTime.setHours(0, 0, 0, 0);
+          const endTime = new Date(date);
+          endTime.setHours(23, 59, 59, 999);
+
           const response = await calendar.freebusy.query({
             requestBody: {
               timeMin: startTime.toISOString(),
@@ -143,7 +172,13 @@ serve(async (req) => {
           );
         } catch (err) {
           console.error("Google Calendar API error:", err);
-          throw new Error(`Google Calendar API error: ${err.message}`);
+          return new Response(
+            JSON.stringify({ error: `Google Calendar API error: ${err.message}` }), 
+            { 
+              status: 200, // Using 200 for application errors to make client-side handling easier
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
       }
 
@@ -151,7 +186,13 @@ serve(async (req) => {
         const { startTime, endTime, summary, description, calendarId } = requestData;
         
         if (!startTime || !endTime) {
-          throw new Error('Start time and end time are required for bookAppointment');
+          return new Response(
+            JSON.stringify({ error: 'Start time and end time are required for bookAppointment' }), 
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
 
         try {
@@ -171,12 +212,24 @@ serve(async (req) => {
           );
         } catch (err) {
           console.error("Google Calendar API error:", err);
-          throw new Error(`Google Calendar API error: ${err.message}`);
+          return new Response(
+            JSON.stringify({ error: `Google Calendar API error: ${err.message}` }), 
+            { 
+              status: 200, // Using 200 for application errors
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
       }
 
       default:
-        throw new Error(`Unknown action: ${action}`);
+        return new Response(
+          JSON.stringify({ error: `Unknown action: ${action}` }), 
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
     }
   } catch (error) {
     console.error('Error:', error);

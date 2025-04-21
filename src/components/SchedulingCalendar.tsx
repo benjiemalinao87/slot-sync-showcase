@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarClock, MapPin } from "lucide-react";
+import { CalendarClock, MapPin, CalendarPlus, ExternalLink } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
+import { getAvailableSlots, bookAppointment, getGoogleAuthUrl } from "@/utils/googleCalendarAuth";
 import { TimeSlot } from "@/types/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const salesReps = [
   {
@@ -105,27 +107,36 @@ const SchedulingCalendar = () => {
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = React.useState<TimeSlot | null>(null);
   const [isBookingOpen, setIsBookingOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    const fetchSlots = async () => {
-      if (date && selectedRep) {
-        try {
-          const slots = await getAvailableSlots(date);
-          setTimeSlots(slots);
-        } catch (error) {
-          console.error('Failed to fetch available slots:', error);
-          toast({
-            title: "Failed to fetch slots",
-            description: "Please try again later",
-            variant: "destructive",
-          });
-        }
+  const fetchSlots = async () => {
+    if (date && selectedRep) {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const slots = await getAvailableSlots(date);
+        setTimeSlots(slots);
+      } catch (error: any) {
+        console.error('Failed to fetch available slots:', error);
+        setError(error.message || 'Failed to fetch available slots');
+        toast({
+          title: "Failed to fetch slots",
+          description: error.message || "Please try again later",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-    };
+    }
+  };
 
-    fetchSlots();
-  }, [date, selectedRep, toast]);
+  useEffect(() => {
+    if (date && selectedRep) {
+      fetchSlots();
+    }
+  }, [date, selectedRep]);
 
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     if (!slot.isAvailable) {
@@ -163,15 +174,19 @@ const SchedulingCalendar = () => {
       });
 
       // Refresh the time slots
-      const newSlots = await getAvailableSlots(date!);
-      setTimeSlots(newSlots);
-    } catch (error) {
+      fetchSlots();
+    } catch (error: any) {
       toast({
         title: "Booking Failed",
-        description: "Failed to book the appointment. Please try again.",
+        description: error.message || "Failed to book the appointment. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleAuthSetup = () => {
+    const authUrl = getGoogleAuthUrl();
+    window.open(authUrl, '_blank');
   };
 
   return (
@@ -198,9 +213,32 @@ const SchedulingCalendar = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Available Time Slots</h3>
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                    {error.includes('GOOGLE_REFRESH_TOKEN') && (
+                      <div className="mt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={handleAuthSetup}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Set up Google Calendar Auth
+                        </Button>
+                      </div>
+                    )}
+                  </Alert>
+                )}
                 {selectedRep ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {timeSlots.length > 0 ? timeSlots.map((slot) => (
+                    {isLoading ? (
+                      <div className="col-span-full flex justify-center py-8">
+                        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : timeSlots.length > 0 ? timeSlots.map((slot) => (
                       <Button
                         key={slot.id}
                         variant={slot.isAvailable ? "outline" : "ghost"}
@@ -227,6 +265,11 @@ const SchedulingCalendar = () => {
                 )}
               </div>
             </CardContent>
+            <CardFooter className="px-6 py-4 bg-gray-50 rounded-b-lg">
+              <p className="text-sm text-gray-500">
+                Need help? Contact us at support@example.com
+              </p>
+            </CardFooter>
           </Card>
         </div>
 
@@ -272,6 +315,16 @@ const SchedulingCalendar = () => {
                 </div>
               </ScrollArea>
             </CardContent>
+            <CardFooter className="px-6 py-4 bg-gray-50 flex justify-center">
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center justify-center gap-2"
+                onClick={handleAuthSetup}
+              >
+                <CalendarPlus className="h-4 w-4" />
+                Set up Google Calendar
+              </Button>
+            </CardFooter>
           </Card>
         </div>
       </div>
