@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -139,7 +138,7 @@ export const handleAuthCallback = async (code: string) => {
 
 // Add a function to generate the OAuth URL for authentication
 export const getGoogleAuthUrl = () => {
-  const GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID"; // Replace with your actual client ID
+  const GOOGLE_CLIENT_ID = "872816584793-loe6iko2in3t5apodfnve0j6foc7l60a.apps.googleusercontent.com";
   const REDIRECT_URI = 'https://appointment-request-with-cobalt.netlify.app/';
   
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -158,6 +157,7 @@ export const getGoogleAuthUrl = () => {
   
   url.searchParams.append('access_type', 'offline');
   url.searchParams.append('prompt', 'consent');
-  
+  url.searchParams.append('include_granted_scopes', 'true');
+
   return url.toString();
 };
