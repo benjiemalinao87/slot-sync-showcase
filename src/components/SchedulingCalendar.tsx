@@ -1,10 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { getAvailableSlots, convertToUserTimezone } from "@/utils/googleCalendarAuth";
+import { getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
 import { TimeSlot } from "@/types/calendar";
 import { format } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Loader, CalendarClock } from "lucide-react";
 
 const singleRep = {
   id: 1,
@@ -248,3 +255,4 @@ const SchedulingCalendar = () => {
 };
 
 export default SchedulingCalendar;
+

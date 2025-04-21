@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
+import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { TimeSlot } from "@/types/calendar";
 
 // This is now the company's calendar where appointments will be booked
 const COMPANY_CALENDAR_ID = 'primary';
@@ -8,7 +9,7 @@ const COMPANY_TIMEZONE = 'America/Los_Angeles'; // Explicitly set West Coast tim
 // Helper function to convert time to user's local timezone
 export const convertToUserTimezone = (inputTime: Date, inputTimezone: string = COMPANY_TIMEZONE) => {
   const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const zonedTime = utcToZonedTime(inputTime, inputTimezone);
+  const zonedTime = toZonedTime(inputTime, inputTimezone);
   return {
     localTime: zonedTime,
     userTimezone: userTimezone
