@@ -2,9 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { CalendarClock, MapPin } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getAvailableSlots, bookAppointment } from "@/utils/googleCalendarAuth";
 import { TimeSlot } from "@/types/calendar";
@@ -164,100 +162,66 @@ const SchedulingCalendar = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-2/3">
-          <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-purple-50 to-transparent p-6 rounded-t-lg">
-              <div>
-                <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Book Your Appointment</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Select your preferred date and time
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex justify-center mb-8">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="rounded-lg border-purple-100 shadow-md hover:shadow-lg transition-shadow"
-                />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-4 text-gray-800">Available Time Slots</h3>
-                {error && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {isLoading ? (
-                    <div className="col-span-full flex justify-center py-8">
-                      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : timeSlots.length > 0 ? timeSlots.map((slot) => (
-                    <Button
-                      key={slot.id}
-                      variant={slot.isAvailable ? "outline" : "ghost"}
-                      className={`w-full ${
-                        slot.isAvailable
-                          ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700"
-                          : "opacity-50 cursor-not-allowed"
-                      }`}
-                      onClick={() => handleTimeSlotSelect(slot)}
-                      disabled={!slot.isAvailable}
-                    >
-                      {slot.startTime}
-                    </Button>
-                  )) : (
-                    <p className="text-gray-500 col-span-full text-center py-4">
-                      Select a date to view available slots
-                    </p>
-                  )}
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-purple-50 to-transparent p-6 rounded-t-lg">
+          <div>
+            <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Book Your Appointment</CardTitle>
+            <CardDescription className="text-gray-600">
+              Select your preferred date and time
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="flex justify-center mb-8">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="rounded-lg border-purple-100 shadow-md hover:shadow-lg transition-shadow"
+            />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Available Time Slots</h3>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {isLoading ? (
+                <div className="col-span-full flex justify-center py-8">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter className="px-6 py-4 bg-gray-50 rounded-b-lg">
-              <p className="text-sm text-gray-500">
-                Need help? Contact us at support@example.com
-              </p>
-            </CardFooter>
-          </Card>
-        </div>
-
-        <div className="lg:w-1/3">
-          <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Your Sales Representative</CardTitle>
-              <CardDescription className="text-gray-600">
-                Meet our team member
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center gap-4 py-4">
-                <Avatar className="h-16 w-16 ring-2 ring-purple-100">
-                  <img src={singleRep.image} alt={singleRep.name} className="object-cover rounded-full" />
-                </Avatar>
-                <div className="text-center">
-                  <h3 className="font-semibold text-gray-900 text-xl">{singleRep.name}</h3>
-                  <div className="flex justify-center items-center gap-2 text-sm text-gray-500 mt-1">
-                    <MapPin className="h-4 w-4 text-purple-400" />
-                    <span>{singleRep.region}</span>
-                  </div>
-                  <div className="flex justify-center items-center gap-2 text-sm text-gray-500 mt-1">
-                    <CalendarClock className="h-4 w-4 text-purple-400" />
-                    <span>{singleRep.availability}</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            {/* No CardFooter needed here */}
-          </Card>
-        </div>
-      </div>
+              ) : timeSlots.length > 0 ? timeSlots.map((slot) => (
+                <Button
+                  key={slot.id}
+                  variant={slot.isAvailable ? "outline" : "ghost"}
+                  className={`w-full ${
+                    slot.isAvailable
+                      ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700"
+                      : "opacity-50 cursor-not-allowed"
+                  }`}
+                  onClick={() => handleTimeSlotSelect(slot)}
+                  disabled={!slot.isAvailable}
+                >
+                  {slot.startTime}
+                </Button>
+              )) : (
+                <p className="text-gray-500 col-span-full text-center py-4">
+                  Select a date to view available slots
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="px-6 py-4 bg-gray-50 rounded-b-lg">
+          <p className="text-sm text-gray-500">
+            Need help? Contact us at support@example.com
+          </p>
+        </CardFooter>
+      </Card>
       <BookingDialog
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
@@ -269,3 +233,4 @@ const SchedulingCalendar = () => {
 };
 
 export default SchedulingCalendar;
+
