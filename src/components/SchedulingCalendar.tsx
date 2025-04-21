@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { format } from "date-fns";
+import { CalendarClock, Loader } from "lucide-react";
 
 const singleRep = {
   id: 1,
@@ -65,6 +67,23 @@ const BookingDialog = ({
       </DialogContent>
     </Dialog>;
 };
+
+const LoadingState = () => (
+  <div className="col-span-full flex flex-col items-center justify-center py-12 space-y-4">
+    <div className="relative">
+      <Loader className="w-8 h-8 animate-spin text-purple-500" />
+      <div className="absolute inset-0 w-8 h-8 border-4 border-purple-100 rounded-full"></div>
+    </div>
+    <p className="text-gray-600 animate-pulse">Getting available slots...</p>
+  </div>
+);
+
+const NoSlotsState = () => (
+  <div className="col-span-full text-center py-8 space-y-4">
+    <CalendarClock className="w-12 h-12 mx-auto text-gray-400" />
+    <p className="text-gray-500">Select a date to view available slots</p>
+  </div>
+);
 
 const SchedulingCalendar = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
@@ -146,48 +165,77 @@ const SchedulingCalendar = () => {
           <div>
             <CardTitle className="text-2xl font-bold text-gray-800 mb-1">Book Your Appointment</CardTitle>
             <CardDescription className="text-gray-600">
-              Select your preferred date and time
+              Select your preferred date and time with {singleRep.name}
             </CardDescription>
           </div>
+          {date && (
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-600">Selected Date</p>
+              <p className="text-lg font-semibold text-purple-600">{format(date, "MMMM d, yyyy")}</p>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-6">
-          <div className="flex justify-center mb-8">
-            <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-lg border-purple-100 shadow-md hover:shadow-lg transition-shadow" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">Available Time Slots</h3>
-            {error && <Alert variant="destructive" className="mb-4">
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {isLoading ? (
-                <div className="col-span-full flex flex-col items-center justify-center py-8 space-y-4">
-                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-gray-600">Getting available slots...</p>
-                </div>
-              ) : timeSlots.length > 0 ? (
-                timeSlots.map(slot => (
-                  <Button 
-                    key={slot.id} 
-                    variant={slot.isAvailable ? "outline" : "ghost"} 
-                    className={`w-full ${slot.isAvailable ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700" : "opacity-50 cursor-not-allowed"}`} 
-                    onClick={() => handleTimeSlotSelect(slot)} 
-                    disabled={!slot.isAvailable}
-                  >
-                    {slot.startTime}
-                  </Button>
-                ))
-              ) : (
-                <p className="text-gray-500 col-span-full text-center py-4">
-                  Select a date to view available slots
-                </p>
+          <div className="flex flex-col md:flex-row md:space-x-8 space-y-8 md:space-y-0">
+            <div className="md:w-1/2">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">1. Choose a Date</h3>
+              <Calendar 
+                mode="single" 
+                selected={date} 
+                onSelect={setDate} 
+                className="rounded-lg border-purple-100 shadow-md hover:shadow-lg transition-shadow bg-white"
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+              />
+            </div>
+            <div className="md:w-1/2">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">2. Select Available Time</h3>
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
+              <div className="grid grid-cols-2 gap-3">
+                {isLoading ? (
+                  <LoadingState />
+                ) : timeSlots.length > 0 ? (
+                  timeSlots.map(slot => (
+                    <Button 
+                      key={slot.id} 
+                      variant={slot.isAvailable ? "outline" : "ghost"} 
+                      className={`
+                        w-full py-6 relative
+                        ${slot.isAvailable 
+                          ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 hover:shadow-md transition-all duration-200 text-gray-700" 
+                          : "opacity-50 cursor-not-allowed bg-gray-50"
+                        }
+                      `}
+                      onClick={() => handleTimeSlotSelect(slot)} 
+                      disabled={!slot.isAvailable}
+                    >
+                      <span className="font-medium">{slot.startTime}</span>
+                      {slot.isAvailable ? (
+                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs text-green-600">
+                          Available
+                        </span>
+                      ) : (
+                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs text-gray-500">
+                          Unavailable
+                        </span>
+                      )}
+                    </Button>
+                  ))
+                ) : (
+                  <NoSlotsState />
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
         <CardFooter className="px-6 py-4 bg-gray-50 rounded-b-lg">
-          <p className="text-sm text-gray-500"> </p>
+          <p className="text-sm text-gray-500">
+            Appointments are in {singleRep.region} ({singleRep.availability})
+          </p>
         </CardFooter>
       </Card>
       <BookingDialog isOpen={isBookingOpen} onClose={() => setIsBookingOpen(false)} slot={selectedSlot} onBook={handleBooking} />
