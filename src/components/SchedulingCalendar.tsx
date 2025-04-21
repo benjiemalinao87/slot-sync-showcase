@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 const singleRep = {
   id: 1,
   name: "Sarah Johnson",
@@ -16,6 +17,7 @@ const singleRep = {
   region: "West Coast",
   availability: "Mon-Fri, 9AM-5PM PST"
 };
+
 const BookingDialog = ({
   isOpen,
   onClose,
@@ -63,6 +65,7 @@ const BookingDialog = ({
       </DialogContent>
     </Dialog>;
 };
+
 const SchedulingCalendar = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>([]);
@@ -73,6 +76,7 @@ const SchedulingCalendar = () => {
   const {
     toast
   } = useToast();
+
   const fetchSlots = async () => {
     if (date) {
       setIsLoading(true);
@@ -93,11 +97,13 @@ const SchedulingCalendar = () => {
       }
     }
   };
+
   useEffect(() => {
     if (date) {
       fetchSlots();
     }
   }, [date]);
+
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     if (!slot.isAvailable) {
       toast({
@@ -110,6 +116,7 @@ const SchedulingCalendar = () => {
     setSelectedSlot(slot);
     setIsBookingOpen(true);
   };
+
   const handleBooking = async (bookingDetails: any) => {
     try {
       const startTime = `${date?.toISOString().split('T')[0]}T${bookingDetails.slot.startTime}:00`;
@@ -132,6 +139,7 @@ const SchedulingCalendar = () => {
       });
     }
   };
+
   return <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Card className="border border-purple-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-purple-50 to-transparent p-6 rounded-t-lg">
@@ -153,13 +161,28 @@ const SchedulingCalendar = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {isLoading ? <div className="col-span-full flex justify-center py-8">
+              {isLoading ? (
+                <div className="col-span-full flex flex-col items-center justify-center py-8 space-y-4">
                   <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                </div> : timeSlots.length > 0 ? timeSlots.map(slot => <Button key={slot.id} variant={slot.isAvailable ? "outline" : "ghost"} className={`w-full ${slot.isAvailable ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700" : "opacity-50 cursor-not-allowed"}`} onClick={() => handleTimeSlotSelect(slot)} disabled={!slot.isAvailable}>
-                  {slot.startTime}
-                </Button>) : <p className="text-gray-500 col-span-full text-center py-4">
+                  <p className="text-gray-600">Getting available slots...</p>
+                </div>
+              ) : timeSlots.length > 0 ? (
+                timeSlots.map(slot => (
+                  <Button 
+                    key={slot.id} 
+                    variant={slot.isAvailable ? "outline" : "ghost"} 
+                    className={`w-full ${slot.isAvailable ? "border-purple-200 hover:bg-purple-50 hover:border-purple-300 text-gray-700" : "opacity-50 cursor-not-allowed"}`} 
+                    onClick={() => handleTimeSlotSelect(slot)} 
+                    disabled={!slot.isAvailable}
+                  >
+                    {slot.startTime}
+                  </Button>
+                ))
+              ) : (
+                <p className="text-gray-500 col-span-full text-center py-4">
                   Select a date to view available slots
-                </p>}
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -170,4 +193,5 @@ const SchedulingCalendar = () => {
       <BookingDialog isOpen={isBookingOpen} onClose={() => setIsBookingOpen(false)} slot={selectedSlot} onBook={handleBooking} />
     </div>;
 };
+
 export default SchedulingCalendar;
